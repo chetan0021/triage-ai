@@ -170,51 +170,48 @@ function loadExample(key) {
 
 // SECTION 6 — BUILD GEMINI PROMPT:
 function buildPrompt(rawText, scenario, location, resources) {
-    return `You are an advanced emergency triage intelligence system.
+    return `You are TriageAI, an emergency decision-support system.
 
-Your job is to convert chaotic real-world input into structured, actionable emergency protocols.
+Your goal is to convert chaotic, real-world inputs into structured, safe, and actionable emergency protocols.
+
+You MUST:
+- Follow a multi-stage reasoning process internally (do not reveal hidden chain-of-thought).
+- Produce ONLY valid JSON matching the schema exactly.
+- Be conservative in safety: when uncertain, ask follow-up questions and increase caution.
+- Prefer simple, step-by-step instructions for non-experts.
+- Never hallucinate facts. If data is missing, explicitly list uncertainty.
+- Always include confidence (0-1) and evidence (key observed facts).
+- Include safety warnings and when to seek professional help.
+
+Severity definitions:
+CRITICAL = immediate life threat
+HIGH = urgent medical attention needed
+MEDIUM = moderate risk, monitor closely
+LOW = minor issue
+
+If the input is insufficient:
+- Set lower confidence
+- Add follow_up_questions
+- Avoid over-claiming
 
 ### INPUT:
 - Raw description: ${rawText}
+- Scenario type: ${scenario || 'not specified'}
 - Location: ${location || 'not specified'}
 - Available resources: ${resources || 'not specified'}
 
-### STEP 1: Extract Facts
-Identify:
-- Symptoms
-- Environment
-- Risks
-- Missing critical info
-
-### STEP 2: Risk Classification
-Classify severity:
-CRITICAL / HIGH / MEDIUM / LOW
-
-### STEP 3: Generate Immediate Actions
-- Must be step-by-step
-- Must be executable by a non-expert
-
-### STEP 4: Uncertainty Handling
-- Identify unknowns
-- Ask follow-up questions
-
-### STEP 5: Confidence Score
-Give a confidence score (0–1)
-
-### OUTPUT STRICT JSON:
+Output ONLY this JSON schema. No extra text:
 {
-  "severity": "...",
+  "severity": "CRITICAL | HIGH | MEDIUM | LOW",
   "confidence": 0.0,
-  "summary": "...",
-  "key_risks": [],
-  "immediate_actions": [],
-  "follow_up_questions": [],
-  "warnings": []
-}
-
-IMPORTANT:
-- NO extra text
-- Only valid JSON`;
+  "summary": "one sentence summary of situation",
+  "evidence": ["key observed fact 1", "key observed fact 2"],
+  "key_risks": ["risk 1", "risk 2"],
+  "immediate_actions": ["step 1", "step 2"],
+  "follow_up_questions": ["question if uncertain"],
+  "warnings": ["do NOT do X", "call 911 if Y"],
+  "seek_help_if": ["condition where professional help is mandatory"]
+}`;
 }
 
 // SECTION 7 — GEMINI API CALL:
@@ -261,10 +258,12 @@ function renderProtocol(protocol) {
         severity,
         confidence,
         summary,
+        evidence,
         key_risks,
         immediate_actions,
         follow_up_questions,
-        warnings
+        warnings,
+        seek_help_if
     } = protocol;
     
     let html = '<div class="protocol-card">';
@@ -275,24 +274,39 @@ function renderProtocol(protocol) {
     if(sevLower === 'high') icon = '🟠';
     if(sevLower === 'medium') icon = '🟡';
 
-    // Severity badge and Confidence
-    html += `<div style="display: flex; justify-content: space-between; align-items: center;">
+    // Severity badge and Confidence bar
+    const confPct = confidence !== undefined ? Math.round(confidence * 100) : 0;
+    const confColor = confPct >= 80 ? 'var(--accent)' : confPct >= 50 ? 'var(--yellow)' : 'var(--red)';
+    html += `<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <div class="severity-badge severity-${sevLower}">
             <strong>${icon} ${severity}</strong>
         </div>
-        <div style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);">
-            Confidence: ${confidence !== undefined ? confidence : 'N/A'}
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted);">Confidence</div>
+            <div style="width:80px; height:6px; background:var(--surface2); border-radius:99px; overflow:hidden;">
+                <div style="width:${confPct}%; height:100%; background:${confColor}; border-radius:99px;"></div>
+            </div>
+            <div style="font-family: var(--mono); font-size: 0.75rem; color: ${confColor};">${confPct}%</div>
         </div>
     </div>`;
     
     // Summary
     if (summary) {
-        html += `<div class="info-item" style="margin-top: 16px;">${summary}</div>`;
+        html += `<div class="info-item" style="margin-top: 16px; font-style: italic; color: var(--text-muted);">"${summary}"</div>`;
+    }
+
+    // Evidence
+    if (evidence && evidence.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">📋 Observed Evidence</div>';
+        evidence.forEach(e => {
+            html += `<div class="info-item">🔍 ${e}</div>`;
+        });
+        html += '</div>';
     }
     
     // Key Risks
     if (key_risks && key_risks.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Key Risks & Facts</div>';
+        html += '<div class="protocol-section"><div class="protocol-section-title">⚡ Key Risks</div>';
         key_risks.forEach(risk => {
             html += `<div class="info-item">📌 ${risk}</div>`;
         });
@@ -301,27 +315,36 @@ function renderProtocol(protocol) {
     
     // Immediate Actions
     if (immediate_actions && immediate_actions.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Immediate Actions</div>';
+        html += '<div class="protocol-section"><div class="protocol-section-title">🚀 Immediate Actions</div>';
         immediate_actions.forEach((action, i) => {
             html += `<div class="action-item"><span class="badge badge-num">${i + 1}</span><span>${action}</span></div>`;
         });
         html += '</div>';
     }
     
-    // Follow-up Questions
-    if (follow_up_questions && follow_up_questions.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Follow-up Questions (Unknowns)</div>';
-        follow_up_questions.forEach(q => {
-            html += `<div class="action-item"><span class="badge" style="background: transparent;">❓</span><span>${q}</span></div>`;
+    // Seek Help If
+    if (seek_help_if && seek_help_if.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title" style="color:var(--red);">🏥 Seek Professional Help If</div>';
+        seek_help_if.forEach(cond => {
+            html += `<div class="warning-item" style="border-color: var(--red);">🚑 ${cond}</div>`;
+        });
+        html += '</div>';
+    }
+
+    // Warnings
+    if (warnings && warnings.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">⛔ Warnings / Do NOT Do</div>';
+        warnings.forEach(warning => {
+            html += `<div class="warning-item">⛔ ${warning}</div>`;
         });
         html += '</div>';
     }
     
-    // Warnings
-    if (warnings && warnings.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Warnings / Do Not Do</div>';
-        warnings.forEach(warning => {
-            html += `<div class="warning-item">⛔ ${warning}</div>`;
+    // Follow-up Questions
+    if (follow_up_questions && follow_up_questions.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">❓ Follow-up Questions</div>';
+        follow_up_questions.forEach(q => {
+            html += `<div class="action-item"><span class="badge" style="background: transparent;">❓</span><span>${q}</span></div>`;
         });
         html += '</div>';
     }
