@@ -1,5 +1,5 @@
-const GEMINI_API_KEY = 'REPLACE_ME_GEMINI_API_KEY'; // Injected by Docker at runtime
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_API_KEY = 'REPLACE_ME_GEMINI_API_KEY'; // Injected by Docker/Cloud Run at runtime
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // SECTION 1 — STATE VARIABLES:
@@ -241,7 +241,7 @@ async function callGemini(rawText, scenario, location, resources) {
             contents: [{ parts }],
             generationConfig: {
                 temperature: 0.2,
-                maxOutputTokens: 1200
+                maxOutputTokens: 8192
             }
         })
     });
@@ -381,6 +381,11 @@ if (analyzeBtn) {
         
         try {
             let cleanJsonStr = await callGemini(rawText, scenario, location, resources);
+            
+            // Strip <think> blocks if present in 2.5 models
+            if (cleanJsonStr.includes('<think>')) {
+                cleanJsonStr = cleanJsonStr.replace(/<think>[\s\S]*?<\/think>/g, '');
+            }
             
             // Strip any JSON markdown fences
             cleanJsonStr = cleanJsonStr.trim();
