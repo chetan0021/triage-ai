@@ -1,5 +1,5 @@
 const GEMINI_API_KEY = 'AIzaSyCDt-GVR_o90Mhp_AzHP3lFwQWeq2wdAes';
-const GEMINI_MODEL = 'gemini-1.5-flash-latest';
+const GEMINI_MODEL = 'gemini-pro';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // SECTION 1 — STATE VARIABLES:
