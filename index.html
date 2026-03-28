@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriageAI — Emergency Intelligence Bridge</title>
+    
+    <!-- Google Fonts link for Space Mono and Syne -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Link to css/style.css -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- HEADER (sticky, blurred backdrop) -->
+    <header class="sticky-header backdrop-blur">
+        <div class="header-left">
+            <!-- Logo: hexagon SVG icon + text "TriageAI" in green monospace font -->
+            <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            </svg>
+            <span class="logo-text" style="font-family: 'Space Mono', monospace; color: #10b981; font-weight: bold;">TriageAI</span>
+        </div>
+        <div class="header-right">
+            <!-- Right side badge -->
+            <span class="badge">Powered by Gemini</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- HERO SECTION -->
+        <section class="hero-section">
+            <div class="tag">Universal Bridge · Human Intent → Life-Saving Action</div>
+            <h1>
+                Turn Chaos Into<br>
+                <span style="color: #10b981;">Clarity.</span>
+            </h1>
+            <p class="subtitle">An emergency triage assistant that converts messy real-world inputs into structured action protocols.</p>
+        </section>
+
+        <!-- TWO COLUMN GRID -->
+        <section class="grid-container">
+            
+            <!-- LEFT PANEL — Input -->
+            <div class="left-panel">
+                <div class="panel-header">
+                    <h2>INPUT</h2>
+                    <p>Raw, messy, real-world data</p>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active">Text / Voice</button>
+                    <button class="tab-btn">Photo / Doc</button>
+                    <button class="tab-btn">Context</button>
+                </div>
+
+                <!-- Tab 1 content -->
+                <div id="tab-text" class="tab-content">
+                    <textarea id="rawInput" placeholder="Describe the messy medical input, symptoms, or situation..."></textarea>
+                    <button id="voiceBtn">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                        <span id="voiceBtnLabel">Use Voice</span>
+                    </button>
+                </div>
+
+                <!-- Tab 2 content -->
+                <div id="tab-image" class="tab-content hidden">
+                    <div id="dropZone" class="drop-zone">
+                        <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Drag & drop files or click to upload</span>
+                        <input type="file" id="fileInput" accept="image/*,.pdf" style="display: none;">
+                    </div>
+                    <div id="imagePreview" class="hidden"></div>
+                </div>
+
+                <!-- Tab 3 content -->
+                <div id="tab-context" class="tab-content hidden">
+                    <select id="scenarioType">
+                        <option value="medical">Medical Emergency</option>
+                        <option value="accident">Accident</option>
+                        <option value="disaster">Natural Disaster</option>
+                        <option value="mental">Mental Health</option>
+                        <option value="general">General</option>
+                    </select>
+                    <input type="text" id="locationCtx" placeholder="Location Context">
+                    <input type="text" id="resourcesCtx" placeholder="Available Resources">
+                </div>
+
+                <!-- Bottom Action -->
+                <div class="action-footer">
+                    <button id="analyzeBtn">
+                        <span id="analyzeBtnText">Analyze</span>
+                        <svg id="analyzeBtnIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL — Output -->
+            <div class="right-panel">
+                <div class="panel-header">
+                    <h2>STRUCTURED OUTPUT</h2>
+                </div>
+
+                <div id="outputArea">
+                    <div class="output-placeholder">
+                        <svg viewBox="0 0 24 24" width="40" height="40" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <p>Output protocol will appear here</p>
+                    </div>
+                </div>
+
+                <div id="outputActions" class="hidden">
+                    <button>Copy</button>
+                    <button>Print</button>
+                    <button>Clear</button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- EXAMPLES ROW -->
+        <section class="examples-row">
+            <span class="examples-label">Try an example:</span>
+            <button onclick="loadExample('chest')">🫀 Chest Pain, Elderly</button>
+            <button onclick="loadExample('accident')">🚗 Road Accident Scene</button>
+            <button onclick="loadExample('child')">👶 Child with Fever</button>
+            <button onclick="loadExample('mental')">🧠 Mental Health Crisis</button>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-left">
+            TriageAI · Built for PromptWars by Google
+        </div>
+        <div class="footer-right">
+            ⚠️ For informational use only. Always contact emergency services in real situations.
+        </div>
+    </footer>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="hidden">
+        <div class="loading-backdrop"></div>
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div id="loadingStep">Processing data...</div>
+            <div id="loadingSubstep">Please wait</div>
+        </div>
+    </div>
+
+    <!-- Script linking to js/app.js -->
+    <script src="js/app.js"></script>
+</body>
+</html>
