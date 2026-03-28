@@ -170,38 +170,51 @@ function loadExample(key) {
 
 // SECTION 6 — BUILD GEMINI PROMPT:
 function buildPrompt(rawText, scenario, location, resources) {
-    return `You are TriageAI, an expert emergency triage AI assistant. Your job is to analyze the messy real-world input provided and return a structured emergency protocol.
+    return `You are an advanced emergency triage intelligence system.
 
-SCENARIO TYPE: ${scenario}
-LOCATION CONTEXT: ${location || 'not specified'}
-AVAILABLE RESOURCES: ${resources || 'not specified'}
+Your job is to convert chaotic real-world input into structured, actionable emergency protocols.
 
-RAW INPUT:
-${rawText}
+### INPUT:
+- Raw description: ${rawText}
+- Location: ${location || 'not specified'}
+- Available resources: ${resources || 'not specified'}
 
-Respond ONLY with a valid JSON object. No markdown, no backticks, no explanation. Use exactly this schema:
+### STEP 1: Extract Facts
+Identify:
+- Symptoms
+- Environment
+- Risks
+- Missing critical info
+
+### STEP 2: Risk Classification
+Classify severity:
+CRITICAL / HIGH / MEDIUM / LOW
+
+### STEP 3: Generate Immediate Actions
+- Must be step-by-step
+- Must be executable by a non-expert
+
+### STEP 4: Uncertainty Handling
+- Identify unknowns
+- Ask follow-up questions
+
+### STEP 5: Confidence Score
+Give a confidence score (0–1)
+
+### OUTPUT STRICT JSON:
 {
-  "severity": "CRITICAL or HIGH or MEDIUM or LOW",
-  "summary": "1-2 sentence plain English summary of the situation",
-  "immediate_actions": ["action 1", "action 2", "action 3"],
-  "do_not_do": ["warning 1", "warning 2"],
-  "key_info_extracted": {
-    "age_gender": "...",
-    "chief_complaint": "...",
-    "known_conditions": "...",
-    "allergies": "...",
-    "medications": "...",
-    "vitals_mentioned": "..."
-  },
-  "emergency_services": {
-    "call_now": true or false,
-    "number": "112",
-    "reason": "..."
-  },
-  "follow_up_steps": ["step 1", "step 2"],
-  "red_flags": ["flag 1", "flag 2"],
-  "google_resources": ["Google search suggestion 1", "Google search suggestion 2"]
-}`;
+  "severity": "...",
+  "confidence": 0.0,
+  "summary": "...",
+  "key_risks": [],
+  "immediate_actions": [],
+  "follow_up_questions": [],
+  "warnings": []
+}
+
+IMPORTANT:
+- NO extra text
+- Only valid JSON`;
 }
 
 // SECTION 7 — GEMINI API CALL:
@@ -246,14 +259,12 @@ async function callGemini(rawText, scenario, location, resources) {
 function renderProtocol(protocol) {
     const {
         severity,
+        confidence,
         summary,
+        key_risks,
         immediate_actions,
-        do_not_do,
-        key_info_extracted,
-        emergency_services,
-        follow_up_steps,
-        red_flags,
-        google_resources
+        follow_up_questions,
+        warnings
     } = protocol;
     
     let html = '<div class="protocol-card">';
@@ -264,9 +275,14 @@ function renderProtocol(protocol) {
     if(sevLower === 'high') icon = '🟠';
     if(sevLower === 'medium') icon = '🟡';
 
-    // Severity badge
-    html += `<div class="severity-badge severity-${sevLower}">
-        <strong>${icon} ${severity}</strong>
+    // Severity badge and Confidence
+    html += `<div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="severity-badge severity-${sevLower}">
+            <strong>${icon} ${severity}</strong>
+        </div>
+        <div style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);">
+            Confidence: ${confidence !== undefined ? confidence : 'N/A'}
+        </div>
     </div>`;
     
     // Summary
@@ -274,27 +290,16 @@ function renderProtocol(protocol) {
         html += `<div class="info-item" style="margin-top: 16px;">${summary}</div>`;
     }
     
-    // Emergency call
-    if (emergency_services && emergency_services.call_now) {
-        html += `<div class="call-emergency">🚑 CALL ${emergency_services.number || '112'} IMMEDIATELY — ${emergency_services.reason || ''}</div>`;
+    // Key Risks
+    if (key_risks && key_risks.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">Key Risks & Facts</div>';
+        key_risks.forEach(risk => {
+            html += `<div class="info-item">📌 ${risk}</div>`;
+        });
+        html += '</div>';
     }
     
-    // Extracted info
-    if (key_info_extracted) {
-        let hasInfo = false;
-        let infoHtml = '<div class="protocol-section"><div class="protocol-section-title">Extracted Key Info</div>';
-        for (const [key, value] of Object.entries(key_info_extracted)) {
-            if (value && value !== "" && value.toLowerCase() !== "unknown" && value.toLowerCase() !== "not mentioned") {
-                hasInfo = true;
-                const displayKey = key.replace(/_/g, ' ').toUpperCase();
-                infoHtml += `<div><strong>${displayKey}:</strong> ${value}</div>`;
-            }
-        }
-        infoHtml += '</div>';
-        if (hasInfo) html += infoHtml;
-    }
-    
-    // Immediate actions
+    // Immediate Actions
     if (immediate_actions && immediate_actions.length > 0) {
         html += '<div class="protocol-section"><div class="protocol-section-title">Immediate Actions</div>';
         immediate_actions.forEach((action, i) => {
@@ -303,38 +308,20 @@ function renderProtocol(protocol) {
         html += '</div>';
     }
     
-    // Do not do
-    if (do_not_do && do_not_do.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Do Not Do</div>';
-        do_not_do.forEach(warning => {
+    // Follow-up Questions
+    if (follow_up_questions && follow_up_questions.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">Follow-up Questions (Unknowns)</div>';
+        follow_up_questions.forEach(q => {
+            html += `<div class="action-item"><span class="badge" style="background: transparent;">❓</span><span>${q}</span></div>`;
+        });
+        html += '</div>';
+    }
+    
+    // Warnings
+    if (warnings && warnings.length > 0) {
+        html += '<div class="protocol-section"><div class="protocol-section-title">Warnings / Do Not Do</div>';
+        warnings.forEach(warning => {
             html += `<div class="warning-item">⛔ ${warning}</div>`;
-        });
-        html += '</div>';
-    }
-    
-    // Red flags
-    if (red_flags && red_flags.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Red Flags</div>';
-        red_flags.forEach(flag => {
-            html += `<div class="warning-item">🚩 ${flag}</div>`;
-        });
-        html += '</div>';
-    }
-    
-    // Follow up steps
-    if (follow_up_steps && follow_up_steps.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Follow-up Steps</div>';
-        follow_up_steps.forEach((step, i) => {
-            html += `<div class="action-item"><span class="badge badge-num">${i + 1}</span><span>${step}</span></div>`;
-        });
-        html += '</div>';
-    }
-    
-    // Google resources
-    if (google_resources && google_resources.length > 0) {
-        html += '<div class="protocol-section"><div class="protocol-section-title">Google Resources</div>';
-        google_resources.forEach(res => {
-            html += `<div class="info-item">🔍 ${res}</div>`;
         });
         html += '</div>';
     }
