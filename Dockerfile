@@ -8,5 +8,5 @@ COPY . /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
 # Cloud Run sets the PORT setting (default 8080)
-# We use envsubst to inject the $PORT dynamically into the Nginx config
-CMD /bin/sh -c "envsubst '\\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+# We use envsubst for Nginx and sed for the static app.js to inject the API key securely.
+CMD /bin/sh -c "sed -i 's/REPLACE_ME_GEMINI_API_KEY/'\"$GEMINI_API_KEY\"'/g' /usr/share/nginx/html/js/app.js && envsubst '\\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
